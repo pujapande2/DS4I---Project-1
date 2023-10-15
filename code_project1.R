@@ -97,6 +97,52 @@ sona$speech <- str_replace_all(sona$speech, "[^[:alnum:]]", " ")
 
 
 
+##eda 
+
+## tidy format
+tidy_sona <- sona %>% 
+  unnest_tokens(word, speech, token = 'words', to_lower = T) %>%
+  filter(!word %in% stop_words$word)
+
+## words per president
+tidy_sona %>%
+  group_by(president_13) %>% count(word) %>% summarise(n = n())
+
+## common words
+tidy_sona %>%
+  count(word, sort = TRUE) %>% slice_head(n = 20)
+
+# Identify the most common words for each president
+most_common_words_per_pres <- tidy_sona %>% group_by(president_13) %>% count(word) %>% arrange(desc(n)) %>%
+  slice_head(n = 20) %>%
+  ungroup()
+
+ggplot(most_common_words_per_pres, aes(x = reorder(word, n), y = n, fill = president_13)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Top 15 Words by President",
+       x = "Word",
+       y = "Frequency") +
+  theme_minimal() + coord_flip() + theme(legend.position = "none") +
+  facet_wrap(~ president_13, scales = "free")
 
 
+
+
+exclude_words <- c("government", "people", "south", "africa", "african")
+
+most_common_words_filtered <- most_common_words_per_pres %>%
+  filter(!word %in% exclude_words)
+
+# Create the plot using the filtered data frame
+ggplot(most_common_words_filtered, aes(x = reorder(word, n), y = n, fill = president_13)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Top 15 Words by President",
+       x = "Word",
+       y = "Frequency") +
+  theme_minimal() + coord_flip() + theme(legend.position = "none") +
+  facet_wrap(~ president_13, scales = "free")
+
+
+
+## sentences
 
