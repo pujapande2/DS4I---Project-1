@@ -91,9 +91,9 @@ sona$speech[35] <- z
 a <- sub("\\d{1,2} [A-Za-z]+ \\d{4}", "", x[36])
 sona$speech[36] <- a
 
-sona$speech <- str_replace_all(sona$speech, "[^[:alnum:]]", " ")
+#sona$speech <- str_replace_all(sona$speech, "[^[:alnum:]]", " ")
 
-#sona$speech <- gsub('[[:digit:]]+', '', x)    #remove numbers
+sona$speech <- gsub('[[:digit:]]+', '', sona$speech)    #remove numbers
 
 
 
@@ -103,6 +103,7 @@ sona$speech <- str_replace_all(sona$speech, "[^[:alnum:]]", " ")
 tidy_sona <- sona %>% 
   unnest_tokens(word, speech, token = 'words', to_lower = T) %>%
   filter(!word %in% stop_words$word)
+
 
 ## words per president
 tidy_sona %>%
@@ -144,5 +145,46 @@ ggplot(most_common_words_filtered, aes(x = reorder(word, n), y = n, fill = presi
 
 
 
-## sentences
+## bigrams
+tidy_sona_bigram <- sona %>% 
+  unnest_tokens(word, speech, token = 'ngrams', n = 2, to_lower = T) %>%
+  filter(!word %in% stop_words$word)
+
+bigrams_separated <- tidy_sona_bigram %>%
+  separate(word, c('word1', 'word2'), sep = ' ')
+
+bigrams_filtered <- bigrams_separated %>%
+  filter(!word1 %in% stop_words$word & !word2 %in% stop_words$word)
+
+# join up the bigrams again
+bigrams_united <- bigrams_filtered %>%
+  unite(bigram, word1, word2, sep = ' ')
+
+bigrams_filtered %>% 
+  count(word1, word2, sort = TRUE) %>% 
+  filter(rank(desc(n)) <= 10) %>% 
+  na.omit()  # if a tweet contains just one word, then the bigrams will return NA
+
+bigrams_counted <- bigrams_united %>% group_by(president_13) %>% count(bigram) %>% arrange(desc(n)) %>%
+  slice_head(n = 20) %>%
+  ungroup() %>%
+  filter(!bigram %in% c("south africa", "south african", "south africans", 'madame speaker', 'honourable speaker'))
+
+ggplot(bigrams_counted, aes(x = reorder(bigram, n), y = n, fill = president_13)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Top 20 Words by President",
+       x = "Word",
+       y = "Frequency") +
+  theme_minimal() + coord_flip() + theme(legend.position = "none") +
+  facet_wrap(~ president_13, scales = "free")
+
+
+
+## tokenise sentences
+
+
+## tidy format
+tidy_sona_sentences <- sona %>% 
+  unnest_tokens(word, speech, token = 'sentences', to_lower = T) %>%
+  anti_join(stop_words, by = c("word" = "word"))
 
