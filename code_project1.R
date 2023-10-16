@@ -188,3 +188,35 @@ tidy_sona_sentences <- sona %>%
   unnest_tokens(word, speech, token = 'sentences', to_lower = T) %>%
   anti_join(stop_words, by = c("word" = "word"))
 
+
+#remove deklerk and motlanthe
+
+tidy_sona_sentences_filtered <- tidy_sona_sentences %>%
+  filter(president_13 != "Motlanthe") %>%
+  filter(president_13 != "deKlerk")
+
+tidy_sona_sentences_filtered$word <- 
+  str_replace_all(tidy_sona_sentences_filtered$word, "[^[:alnum:]]", " ")
+
+
+# bag of words
+tidy_sona_sentences_filtered <- tidy_sona_sentences_filtered %>% 
+  mutate(word_index = row_number())
+
+bag_of_words <- tidy_sona_sentences_filtered %>% 
+  unnest_tokens(word, word, token = "words" ) %>%
+  select(c(3, 5, 6)) %>% group_by(word_index, president_13) %>% count(word) %>% 
+  pivot_wider(names_from = word, values_from = n)
+
+bag_of_words <- replace(bag_of_words, is.na(bag_of_words),0)
+bag_of_words <- bag_of_words %>% rename(President = president_13, 
+                                        sentence_index = word_index)
+
+
+#
+
+
+
+
+
+
