@@ -205,18 +205,32 @@ tidy_sona_sentences_filtered <- tidy_sona_sentences_filtered %>%
 
 bag_of_words <- tidy_sona_sentences_filtered %>% 
   unnest_tokens(word, word, token = "words" ) %>%
-  select(c(3, 5, 6)) %>% group_by(word_index, president_13) %>% count(word) %>% 
+  select(c(3, 5, 6)) %>% group_by(word_index, president_13) %>% 
+  filter(!word %in% stop_words$word) %>% 
+  count(word) %>% 
   pivot_wider(names_from = word, values_from = n)
+
+
 
 bag_of_words <- replace(bag_of_words, is.na(bag_of_words),0)
 bag_of_words <- bag_of_words %>% rename(President = president_13, 
                                         sentence_index = word_index)
 
 
-#
+# tf-idf
+
+tfidf_raw <- tidy_sona_sentences_filtered %>% 
+  unnest_tokens(word, word, token = "words" ) %>% filter(!word %in% stop_words$word) %>%
+  select(c(3, 5, 6)) %>% group_by(word_index, president_13) %>% count(word) 
+  
+
+tfidf_bind <- tfidf_raw %>% bind_tf_idf(word, word_index, n) 
+
+tfidf_reduced <- tfidf_bind %>% select(c(1, 2, 3, 4, 7)) %>% 
+  pivot_wider(names_from = word, values_from = tf_idf)
 
 
-
-
-
+tfidf_reduced <- replace(tfidf_reduced, is.na(tfidf_reduced),0)
+tfidf_reduced <- tfidf_reduced %>% rename(President = president_13, 
+                                        sentence_index = word_index)
 
