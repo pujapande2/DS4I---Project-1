@@ -234,3 +234,62 @@ tfidf_reduced <- replace(tfidf_reduced, is.na(tfidf_reduced),0)
 tfidf_reduced <- tfidf_reduced %>% rename(President = president_13, 
                                         sentence_index = word_index)
 
+
+
+## balanced data?
+#bag of words
+bag_of_words %>% group_by(President) %>% count() 
+
+bag_of_words_factor <- bag_of_words
+bag_of_words_factor$President <- as.factor(ifelse(bag_of_words_factor$President == "Mandela", 0, 
+                                                  ifelse(bag_of_words_factor$President == "Mbeki", 1, 
+                                                         ifelse(bag_of_words_factor$President == "Zuma", 2, 3))))
+set.seed(2493274)
+
+library(caret)
+upsampled_bof <- upSample(bag_of_words_factor[, 3:10487], bag_of_words_factor$President)
+
+
+
+##tfidf
+tfidf_reduced %>% group_by(President) %>% count() 
+
+tfidf_factor <- tfidf_reduced
+tfidf_factor$President <- as.factor(ifelse(tfidf_factor$President == "Mandela", 0, 
+                                                  ifelse(tfidf_factor$President == "Mbeki", 1, 
+                                                         ifelse(tfidf_factor$President == "Zuma", 2, 3))))
+set.seed(2493274)
+
+upsampled_bof_tfidf <- upSample(tfidf_factor[, 3:10488], tfidf_factor$President)
+
+
+
+
+#smote
+library(scutr)
+
+bag_of_words_2 <- bag_of_words
+bag_of_words_2$President <- ifelse(bag_of_words_2$President == "Mandela", 0, 
+                         ifelse(bag_of_words_2$President == "Mbeki", 1, 
+                                ifelse(bag_of_words_2$President == "Zuma", 2, 3)))
+bag_of_words_2 <- as.data.frame(bag_of_words_2)
+bag_of_words_2$President <- as.factor(bag_of_words_2$President)
+
+
+oversample_smote(bag_of_words_2[, 2:10487], '0', "President", 2629)
+
+
+install.packages("ROSE")
+library(ROSE)
+
+
+oversampled_data <- ovun.sample(President ~ ., data = bag_of_words_2, 
+                                method = "over", N = 2629)
+
+library(performanceEstimation)
+
+smote_bow <- smote(President ~., bag_of_words_2[, 2:10487], perc.over = 2, 
+                   perc.under = 2)
+
+smote_tfidf <- smote(President ~., tfidf_factor[, 2:10488], perc.over = 2, 
+                   perc.under = 2)
