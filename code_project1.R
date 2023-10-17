@@ -203,12 +203,17 @@ tidy_sona_sentences_filtered$word <-
 tidy_sona_sentences_filtered <- tidy_sona_sentences_filtered %>% 
   mutate(word_index = row_number())
 
+
+words_to_keep <- bag_of_words %>% group_by(word) %>%
+  summarize(n = sum(n)) %>% arrange(desc(n)) %>% slice_head(n=1000)
+
+
 bag_of_words <- tidy_sona_sentences_filtered %>% 
   unnest_tokens(word, word, token = "words" ) %>%
   select(c(3, 5, 6)) %>% group_by(word_index, president_13) %>% 
   filter(!word %in% stop_words$word) %>% 
-  count(word) %>% 
-  pivot_wider(names_from = word, values_from = n)
+  count(word) %>% filter(word %in% words_to_keep$word) %>% 
+  pivot_wider(names_from = word, values_from = n) 
 
 
 
@@ -220,7 +225,8 @@ bag_of_words <- bag_of_words %>% rename(President = president_13,
 # tf-idf
 
 tfidf_raw <- tidy_sona_sentences_filtered %>% 
-  unnest_tokens(word, word, token = "words" ) %>% filter(!word %in% stop_words$word) %>%
+  unnest_tokens(word, word, token = "words" ) %>% filter(!word %in% stop_words$word) %>% 
+  filter(word %in% words_to_keep$word) %>%
   select(c(3, 5, 6)) %>% group_by(word_index, president_13) %>% count(word) 
   
 
@@ -247,7 +253,7 @@ bag_of_words_factor$President <- as.factor(ifelse(bag_of_words_factor$President 
 set.seed(2493274)
 
 library(caret)
-upsampled_bof <- upSample(bag_of_words_factor[, 3:10487], bag_of_words_factor$President)
+upsampled_bof <- upSample(bag_of_words_factor[, 3:1002], bag_of_words_factor$President)
 
 
 
@@ -260,7 +266,7 @@ tfidf_factor$President <- as.factor(ifelse(tfidf_factor$President == "Mandela", 
                                                          ifelse(tfidf_factor$President == "Zuma", 2, 3))))
 set.seed(2493274)
 
-upsampled_bof_tfidf <- upSample(tfidf_factor[, 3:10488], tfidf_factor$President)
+upsampled_bof_tfidf <- upSample(tfidf_factor[, 3:1003], tfidf_factor$President)
 
 
 
@@ -275,21 +281,37 @@ bag_of_words_2$President <- ifelse(bag_of_words_2$President == "Mandela", 0,
 bag_of_words_2 <- as.data.frame(bag_of_words_2)
 bag_of_words_2$President <- as.factor(bag_of_words_2$President)
 
-
-oversample_smote(bag_of_words_2[, 2:10487], '0', "President", 2629)
-
-
-install.packages("ROSE")
-library(ROSE)
-
-
-oversampled_data <- ovun.sample(President ~ ., data = bag_of_words_2, 
-                                method = "over", N = 2629)
+# 
+# oversample_smote(bag_of_words_2[, 2:1002], '0', "President", 2524)
+# 
+# 
+# install.packages("ROSE")
+# library(ROSE)
+# 
+# 
+# oversampled_data <- ovun.sample(President ~ ., data = bag_of_words_2, 
+#                                 method = "over", N = 2629)
 
 library(performanceEstimation)
 
-smote_bow <- smote(President ~., bag_of_words_2[, 2:10487], perc.over = 2, 
-                   perc.under = 2)
+smote_bow <- smote(President ~., bag_of_words_2[, 2:1002], perc.over = 0.5, 
+                   perc.under = 9)
+sum(smote_bow$President==0)
+sum(smote_bow$President==1)
+sum(smote_bow$President==2)
+sum(smote_bow$President==3)
 
-smote_tfidf <- smote(President ~., tfidf_factor[, 2:10488], perc.over = 2, 
-                   perc.under = 2)
+smote_tfidf <- smote(President ~., tfidf_factor[, 2:1003], perc.over = 0.5, 
+                   perc.under = 9)
+sum(smote_tfidf$President==0)
+sum(smote_tfidf$President==1)
+sum(smote_tfidf$President==2)
+sum(smote_tfidf$President==3)
+
+
+## feed forward neural network
+
+#upsamples x2, smote x2, normal x2
+
+
+
