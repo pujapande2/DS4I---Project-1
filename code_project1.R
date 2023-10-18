@@ -204,9 +204,15 @@ tidy_sona_sentences_filtered <- tidy_sona_sentences_filtered %>%
   mutate(word_index = row_number())
 
 
+
+bag_of_words <- tidy_sona_sentences_filtered %>% 
+  unnest_tokens(word, word, token = "words" ) %>%
+  select(c(3, 5, 6)) %>% group_by(word_index, president_13) %>% 
+  filter(!word %in% stop_words$word) %>% 
+  count(word) 
+
 words_to_keep <- bag_of_words %>% group_by(word) %>%
   summarize(n = sum(n)) %>% arrange(desc(n)) %>% slice_head(n=1000)
-
 
 bag_of_words <- tidy_sona_sentences_filtered %>% 
   unnest_tokens(word, word, token = "words" ) %>%
@@ -214,8 +220,6 @@ bag_of_words <- tidy_sona_sentences_filtered %>%
   filter(!word %in% stop_words$word) %>% 
   count(word) %>% filter(word %in% words_to_keep$word) %>% 
   pivot_wider(names_from = word, values_from = n) 
-
-
 
 bag_of_words <- replace(bag_of_words, is.na(bag_of_words),0)
 bag_of_words <- bag_of_words %>% rename(President = president_13, 
@@ -256,7 +260,6 @@ library(caret)
 upsampled_bof <- upSample(bag_of_words_factor[, 3:1002], bag_of_words_factor$President)
 
 
-
 ##tfidf
 tfidf_reduced %>% group_by(President) %>% count() 
 
@@ -281,16 +284,7 @@ bag_of_words_2$President <- ifelse(bag_of_words_2$President == "Mandela", 0,
 bag_of_words_2 <- as.data.frame(bag_of_words_2)
 bag_of_words_2$President <- as.factor(bag_of_words_2$President)
 
-# 
-# oversample_smote(bag_of_words_2[, 2:1002], '0', "President", 2524)
-# 
-# 
-# install.packages("ROSE")
-# library(ROSE)
-# 
-# 
-# oversampled_data <- ovun.sample(President ~ ., data = bag_of_words_2, 
-#                                 method = "over", N = 2629)
+
 
 library(performanceEstimation)
 
@@ -313,6 +307,76 @@ sum(smote_tfidf$President==3)
 
 #upsamples x2, smote x2, normal x2
 
+library(keras)
+library(tensorflow)
+
+## training, test and validation
+#normal bow
+train_index_normal_bof <- createDataPartition(bag_of_words_2$President, 
+                                          p = 0.7, list = FALSE, times = 1)
+training_data_normal_bof <- bag_of_words_2[train_index_normal_bof, ]
+remaining_data_normal_bof <- bag_of_words_2[-train_index_normal_bof, ]
+
+splits_normal_bof <- createDataPartition(remaining_data_normal_bof$President, p = 0.5, 
+                                         list = FALSE, times = 1)
+test_data_normal_bof <- remaining_data_normal_bof[splits_normal_bof, ]
+validation_data_normal_bof <- remaining_data_normal_bof[-splits_normal_bof, ]
+
+
+training_data_normal_bof_x <- training_data_normal_bof[, 3:1002]
+training_data_normal_bof_y <- training_data_normal_bof[, 2]
+
+test_data_normal_bof_x <- test_data_normal_bof[, 3:1002]
+test_data_normal_bof_y <- test_data_normal_bof[, 2]
+
+validation_data_normal_bof_x <- validation_data_normal_bof[, 3:1002]
+validation_data_normal_bof_y <- validation_data_normal_bof[, 2]
+
+
+##smote bow
+train_index_smote_bow <- createDataPartition(smote_bow$President, 
+                                              p = 0.7, list = FALSE, times = 1)
+training_data_smote_bow <- smote_bow[train_index_smote_bow, ]
+remaining_data_smote_bow <- smote_bow[-train_index_smote_bow, ]
+
+splits_smote_bow <- createDataPartition(remaining_data_smote_bow$President, p = 0.5, 
+                                         list = FALSE, times = 1)
+test_data_smote_bow <- remaining_data_smote_bow[splits_smote_bow, ]
+validation_data_smote_bow <- remaining_data_smote_bow[-splits_smote_bow, ]
+
+
+training_data_smote_bow_x <- training_data_smote_bow[, 2:1001]
+training_data_smote_bow_y <- training_data_smote_bow[, 1]
+
+test_data_smote_bow_x <- test_data_smote_bow[, 2:1001]
+test_data_smote_bow_y <- test_data_smote_bow[, 1]
+
+validation_data_smote_bow_x <- validation_data_smote_bow[, 2:1001]
+validation_data_smote_bow_y <- validation_data_smote_bow[, 1]
+
+##upsampled bow
+
+train_index_upsampled_bow <- createDataPartition(upsampled_bof$Class, 
+                                             p = 0.7, list = FALSE, times = 1)
+training_data_upsampled_bow <- upsampled_bof[train_index_upsampled_bow, ]
+remaining_data_upsampled_bow <- upsampled_bof[-train_index_upsampled_bow, ]
+
+splits_upsampled_bow <- createDataPartition(remaining_data_upsampled_bow$Class, p = 0.5, 
+                                        list = FALSE, times = 1)
+test_data_upsampled_bow <- remaining_data_upsampled_bow[splits_upsampled_bow, ]
+validation_data_upsampled_bow <- remaining_data_upsampled_bow[-splits_upsampled_bow, ]
 
 
 
+
+training_data_upsampled_bow_x <- training_data_upsampled_bow[, 1:1000]
+training_data_upsampled_bow_y <- training_data_upsampled_bow[, 1001]
+
+test_data_upsampled_bow_x <- test_data_upsampled_bow[, 1:1000]
+test_data_upsampled_bow_y <- test_data_upsampled_bow[, 1001]
+
+validation_data_upsampled_bow_x <- validation_data_upsampled_bow[, 1:1000]
+validation_data_upsampled_bow_y <- validation_data_upsampled_bow[, 1001]
+
+
+## feed forward neural network
