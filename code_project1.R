@@ -517,6 +517,8 @@ history_cnn_normal <- model_cnn_normal %>% fit(
   validation_split = 0.2, shuffle = TRUE
 )
 
+save(history_cnn_normal, file = "history_cnn_normal.RData")
+
 
 ##upsampled
 tensorflow::set_random_seed(2493274)
@@ -542,6 +544,7 @@ history_cnn_upsampled <- model_cnn_upsampled %>% fit(
   validation_split = 0.2, shuffle = TRUE
 )
 
+save(history_cnn_upsampled, file = "history_cnn_upsampled.RData")
 
 
 ##smote
@@ -567,4 +570,15 @@ history_cnn_smote <- model_cnn_smote %>% fit(
   epochs = 30, batch_size = 5, 
   validation_split = 0.2, shuffle = TRUE
 )
+
+save(history_cnn_smote, file = "history_cnn_smote.RData")
+
+
+#testing all cnn
+
+model_cnn_normal %>% evaluate(validation_data_normal_bof_x, validation_data_normal_bof_y)
+
+model_cnn_upsample %>% evaluate(validation_data_upsampled_bow_x, validation_data_upsampled_bow_y)
+
+model_cnn_upsample %>% evaluate(validation_data_smote_bow_x, validation_data_smote_bow_y)
 
