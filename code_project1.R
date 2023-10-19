@@ -275,8 +275,6 @@ upsampled_bof_tfidf <- upSample(tfidf_factor[, 3:1003], tfidf_factor$President)
 
 
 #smote
-library(scutr)
-
 bag_of_words_2 <- bag_of_words
 bag_of_words_2$President <- ifelse(bag_of_words_2$President == "Mandela", 0, 
                          ifelse(bag_of_words_2$President == "Mbeki", 1, 
@@ -312,6 +310,8 @@ library(tensorflow)
 
 ## training, test and validation
 #normal bow
+
+set.seed(2493274)
 train_index_normal_bof <- createDataPartition(bag_of_words_2$President, 
                                           p = 0.7, list = FALSE, times = 1)
 training_data_normal_bof <- bag_of_words_2[train_index_normal_bof, ]
@@ -379,4 +379,28 @@ validation_data_upsampled_bow_x <- validation_data_upsampled_bow[, 1:1000]
 validation_data_upsampled_bow_y <- validation_data_upsampled_bow[, 1001]
 
 
-## feed forward neural network
+
+model_nn_normal <- keras_model_sequential() %>%
+  layer_dense(units = 32, activation = 'relu', input_shape = c(1000)) %>% 
+  layer_dropout(rate = 0.5) %>%
+  layer_dense(units = 3, activation = 'softmax')
+
+model_nn_normal %>% compile(
+  loss = 'sparse_categorical_crossentropy',
+  optimizer = optimizer_adam(learning_rate = 0.01),
+  metrics = c('accuracy', "kappa"),
+)
+
+summary(model_nn_normal)
+dim(training_data_normal_bof_x)
+
+training_data_normal_bof_y <- as.numeric(training_data_normal_bof_y)
+
+history_normal <- model_nn_normal %>% fit(
+  training_data_normal_bof_x, training_data_normal_bof_y, 
+  epochs = 100, batch_size = 5, 
+  validation_split = 0.2, shuffle = TRUE
+)
+
+
+
