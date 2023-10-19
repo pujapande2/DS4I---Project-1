@@ -378,27 +378,33 @@ test_data_upsampled_bow_y <- test_data_upsampled_bow[, 1001]
 validation_data_upsampled_bow_x <- validation_data_upsampled_bow[, 1:1000]
 validation_data_upsampled_bow_y <- validation_data_upsampled_bow[, 1001]
 
-
-
+set.seed(2493274)
 model_nn_normal <- keras_model_sequential() %>%
-  layer_dense(units = 32, activation = 'relu', input_shape = c(1000)) %>% 
+  layer_dense(units = 124, activation = 'relu', input_shape = 1000) %>% 
   layer_dropout(rate = 0.5) %>%
-  layer_dense(units = 3, activation = 'softmax')
+  layer_dense(units = 4, activation = 'softmax')
+
 
 model_nn_normal %>% compile(
-  loss = 'sparse_categorical_crossentropy',
-  optimizer = optimizer_adam(learning_rate = 0.01),
-  metrics = c('accuracy', "kappa"),
+  loss = 'categorical_crossentropy',
+  optimizer = "adam",
+  metrics = "accuracy",
 )
+
+#training_data_normal_bof_y <- as.integer(training_data_normal_bof_y) -1
 
 summary(model_nn_normal)
 dim(training_data_normal_bof_x)
+dim(training_data_normal_bof_y)
 
-training_data_normal_bof_y <- as.numeric(training_data_normal_bof_y)
+training_data_normal_bof_x <- as.matrix(training_data_normal_bof_x)
+testing <- to_categorical(training_data_normal_bof_y)
+tail(testing)
+dim(testing)
 
 history_normal <- model_nn_normal %>% fit(
-  training_data_normal_bof_x, training_data_normal_bof_y, 
-  epochs = 100, batch_size = 5, 
+  training_data_normal_bof_x, testing, 
+  epochs = 30, batch_size = 5, 
   validation_split = 0.2, shuffle = TRUE
 )
 
