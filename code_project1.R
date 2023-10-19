@@ -398,9 +398,9 @@ dim(training_data_normal_bof_x)
 dim(training_data_normal_bof_y)
 
 training_data_normal_bof_x <- as.matrix(training_data_normal_bof_x)
-testing <- to_categorical(training_data_normal_bof_y)
-tail(testing)
-dim(testing)
+training_data_normal_bof_y <- to_categorical(training_data_normal_bof_y)
+tail(training_data_normal_bof_y)
+dim(training_data_normal_bof_y)
 
 history_normal <- model_nn_normal %>% fit(
   training_data_normal_bof_x, testing, 
@@ -429,7 +429,7 @@ model_nn_upsample %>% compile(
 
 training_data_upsampled_bow_x <- as.matrix(training_data_upsampled_bow_x)
 training_data_upsampled_bow_y <- to_categorical(training_data_upsampled_bow_y)
-
+dim(training_data_upsampled_bow_y)
 
 history_upsample <- model_nn_upsample %>% fit(
   training_data_normal_bof_x, training_data_upsampled_bow_y, 
@@ -441,7 +441,7 @@ save(history_upsample, file = "history_upsample.RData")
 
 
 ##smote nn
-set.seed(2493274)
+tensorflow::set_random_seed(2493274)
 model_nn_smote <- keras_model_sequential() %>%
   layer_dense(units = 124, activation = 'relu', input_shape = 1000) %>% 
   layer_dropout(rate = 0.5) %>%
@@ -493,6 +493,78 @@ model_nn_upsample %>% evaluate(validation_data_smote_bow_x, validation_data_smot
 # table(y_test_original, y_test_hat)
 
 ## cnn
+##normal
+tensorflow::set_random_seed(2493274)
+model_cnn_normal <- keras_model_sequential() %>% 
+  layer_embedding(1000, output_dim = 10, input_length = 1000) %>%
+  layer_dropout(0.2) %>%
+  layer_conv_1d(filters = 64, kernel_size = 8, activation = "relu") %>%
+  layer_max_pooling_1d(pool_size = 2) %>%
+  layer_flatten() %>%
+  layer_dense(32, activation = "relu") %>%
+  layer_dense(4, activation = "softmax")
 
 
+model_cnn_normal %>% compile(
+  loss = "categorical_crossentropy",
+  optimizer = "adam",
+  metrics = "accuracy"
+)
+
+history_cnn_normal <- model_cnn_normal %>% fit(
+  training_data_normal_bof_x, training_data_normal_bof_y, 
+  epochs = 30, batch_size = 5, 
+  validation_split = 0.2, shuffle = TRUE
+)
+
+
+##upsampled
+tensorflow::set_random_seed(2493274)
+model_cnn_upsampled <- keras_model_sequential() %>% 
+  layer_embedding(1000, output_dim = 10, input_length = 1000) %>%
+  layer_dropout(0.2) %>%
+  layer_conv_1d(filters = 64, kernel_size = 8, activation = "relu") %>%
+  layer_max_pooling_1d(pool_size = 2) %>%
+  layer_flatten() %>%
+  layer_dense(32, activation = "relu") %>%
+  layer_dense(4, activation = "softmax")
+
+
+model_cnn_upsampled %>% compile(
+  loss = "categorical_crossentropy",
+  optimizer = "adam",
+  metrics = "accuracy"
+)
+
+history_cnn_upsampled <- model_cnn_upsampled %>% fit(
+  training_data_upsampled_bow_x, training_data_upsampled_bow_y, 
+  epochs = 30, batch_size = 5, 
+  validation_split = 0.2, shuffle = TRUE
+)
+
+
+
+##smote
+tensorflow::set_random_seed(2493274)
+model_cnn_smote <- keras_model_sequential() %>% 
+  layer_embedding(1000, output_dim = 10, input_length = 1000) %>%
+  layer_dropout(0.2) %>%
+  layer_conv_1d(filters = 64, kernel_size = 8, activation = "relu") %>%
+  layer_max_pooling_1d(pool_size = 2) %>%
+  layer_flatten() %>%
+  layer_dense(32, activation = "relu") %>%
+  layer_dense(4, activation = "softmax")
+
+
+model_cnn_smote %>% compile(
+  loss = "categorical_crossentropy",
+  optimizer = "adam",
+  metrics = "accuracy"
+)
+
+history_cnn_smote <- model_cnn_smote %>% fit(
+  training_data_smote_bow_x, training_data_smote_bow_y, 
+  epochs = 30, batch_size = 5, 
+  validation_split = 0.2, shuffle = TRUE
+)
 
