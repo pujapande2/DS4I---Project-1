@@ -1,0 +1,42 @@
+---
+title: "Data Science for Industry - Assignment 1"
+author: "Puja Pande"
+format: html
+editor: visual
+toc: true
+number-sections: true
+execute: 
+  echo: false
+---
+
+# Introduction
+
+# Literature Review
+
+
+# Data and Preprocessing
+
+## Data Collection
+
+As the aim of this project was to create predictive models that take a
+sentence of text as input and return a prediction of which president was the source of that sentence, previous SONA speeches delivered by the presidents of South Africa were used as the data. These were accessed from the South African Government website (*https://www.gov.za/state-nation-address*) and include speeches from five former presidents: FW de Klerk, Nelson Mandela, Thabo Mbeki, Kgalema Motlanthe, Jacob Zuma and the current president, Cyril Ramaphosa. Overall, 36 speeches were collected ranging from 1994 - 2023. The process outlining the analysis of these speeches is to follow. 
+
+## Data Cleaning and Preprocessing
+
+In order to analyse and model the SONA data, it had to be cleaned and preprocessed first. The .txt files were first read into R where they were all added to a single dataframe. The information regarding the date and year in which the speech was delivered as well as the president delivering the speech were extracted and adding as columns to the dataframe. In addition to this, the dates were all formatted to the same format, all the punctuation was removed and the words in the speeches were all converted to lowercase. Finally, all numbers were removed from the text and the text was also cleaned to remove the dates that appear at the beginning/towards the beginning of the speeches. 
+
+The speeches were then converted to a 'tidy' format whereby the data were then processed so that all variables were in columns, all observations are in rows and every value is in a cell where a cell may only have one value. During this process of converting the speeches to a 'tidy' format, the process of tokenisation was also implemented which is the process of taking a text string, such as each individual speech and decomposing it into chunks which in this case were sentences. Essentially, the speeches were broken down into sentences and converted to a format where each observation only consisted of one sentence. After this was done, stop words or words that occur commonly, were removed from the 'tidy' dataset so that these would not add noise while analysing the data. Lastly, the sentences pertaining to de Klerk and Motlanthe were removed as both these former presidents had only delivered one speech each. MENTION HOW MANY SPEECHES EXACTLY
+
+After the data had been cleaned and pre-processed, exploratory data analysis was conducted on the data before the predictive models were applied to the sentences.
+
+## Exploratory Data Analysis
+
+
+# Methods
+
+
+# Results
+
+# Discussion
+
+# Conclusion

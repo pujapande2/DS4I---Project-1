@@ -114,7 +114,8 @@ tidy_sona %>%
   count(word, sort = TRUE) %>% slice_head(n = 20)
 
 # Identify the most common words for each president
-most_common_words_per_pres <- tidy_sona %>% group_by(president_13) %>% count(word) %>% arrange(desc(n)) %>%
+most_common_words_per_pres <- tidy_sona %>% group_by(president_13) %>% count(word) %>% 
+  arrange(desc(n)) %>%
   slice_head(n = 20) %>%
   ungroup()
 
@@ -578,7 +579,80 @@ save(history_cnn_smote, file = "history_cnn_smote.RData")
 
 model_cnn_normal %>% evaluate(validation_data_normal_bof_x, validation_data_normal_bof_y)
 
-model_cnn_upsample %>% evaluate(validation_data_upsampled_bow_x, validation_data_upsampled_bow_y)
+model_cnn_upsampled %>% evaluate(validation_data_upsampled_bow_x, 
+                                 validation_data_upsampled_bow_y)
 
-model_cnn_upsample %>% evaluate(validation_data_smote_bow_x, validation_data_smote_bow_y)
+model_cnn_smote %>% evaluate(validation_data_smote_bow_x, validation_data_smote_bow_y)
+
+
+## random forest
+
+#training
+
+library(caret)
+
+set.seed(2493274)
+
+ctrl <- trainControl(method = 'cv', number = 3, search = "random", verboseIter = T)
+gbm_grid <- expand.grid(n.trees = c(500, 1000),
+                        interaction.depth = c(1),
+                        shrinkage = c(0.01, 0.001),
+                        n.minobsinnode = 1)
+
+gbm_gridsearch_normal <- train(President ~ ., data = training_data_normal_bof[2:1002], 
+                        method = 'gbm', 
+                        distribution = 'multinomial', 
+                        trControl = ctrl, 
+                        verbose = T, 
+                        tuneGrid = gbm_grid)
+
+save(gbm_gridsearch_normal, file = "gbm_gridsearch_normal.RData")
+confusionMatrix(gbm_gridsearch_normal)
+
+
+gbm_grid_searched <- expand.grid(n.trees = c(1000),
+                        interaction.depth = c(1),
+                        shrinkage = c(0.01),
+                        n.minobsinnode = 1)
+
+gbm_gridsearch_upsample <- train(Class ~ ., data = training_data_upsampled_bow, 
+                               method = 'gbm', 
+                               distribution = 'multinomial', 
+                               trControl = ctrl, 
+                               metric = "accuracy",
+                               verbose = T, 
+                               tuneGrid = gbm_grid_searched)
+
+save(gbm_gridsearch_upsample, file = "gbm_gridsearch_upsample.RData")
+confusionMatrix(gbm_gridsearch_upsample)
+
+
+gbm_gridsearch_smote <- train(President ~ ., data = training_data_smote_bow, 
+                               method = 'gbm', 
+                               distribution = 'multinomial', 
+                               trControl = ctrl, 
+                               verbose = T, 
+                               tuneGrid = gbm_grid_searched)
+
+save(gbm_gridsearch_smote, file = "gbm_gridsearch_smote.RData")
+confusionMatrix(gbm_gridsearch_smote)
+
+
+## validation
+
+## Prediction
+gbm_pred_normal <- predict(gbm_gridsearch_normal, validation_data_normal_bof)
+confusionMatrix(gbm_pred_normal, validation_data_normal_bof$President)
+
+gbm_pred_normal <- predict(gbm_gridsearch_normal, validation_data_normal_bof)
+confusionMatrix(gbm_pred_normal, validation_data_normal_bof$President)
+
+gbm_pred_normal <- predict(gbm_gridsearch_normal, validation_data_normal_bof)
+confusionMatrix(gbm_pred_normal, validation_data_normal_bof$President)
+
+
+
+## final test! 
+
+
 
