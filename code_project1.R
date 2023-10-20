@@ -1,6 +1,10 @@
 library(stringr)
 library(tidytext)
 library(tidyverse)
+library(reticulate)
+library(caret)
+library(tensorflow)
+library(keras)
 
 # read in text data files and organise these into a data frame
 filenames <- c('1994_post_elections_Mandela.txt', '1994_pre_elections_deKlerk.txt', '1995_Mandela.txt', '1996_Mandela.txt', '1997_Mandela.txt', '1998_Mandela.txt', 
@@ -234,22 +238,22 @@ bag_of_words <- bag_of_words %>% rename(President = president_13,
 
 # tf-idf
 
-tfidf_raw <- tidy_sona_sentences_filtered %>% 
-  unnest_tokens(word, word, token = "words" ) %>% filter(!word %in% stop_words$word) %>% 
-  filter(word %in% words_to_keep$word) %>%
-  select(c(3, 5, 6)) %>% group_by(word_index, president_13) %>% count(word) 
-  
-
-tfidf_bind <- tfidf_raw %>% bind_tf_idf(word, word_index, n) 
-
-tfidf_reduced <- tfidf_bind %>% select(c(1, 2, 3, 4, 7)) %>% 
-  pivot_wider(names_from = word, values_from = tf_idf)
-
-
-tfidf_reduced <- replace(tfidf_reduced, is.na(tfidf_reduced),0)
-tfidf_reduced <- tfidf_reduced %>% rename(President = president_13, 
-                                        sentence_index = word_index)
-
+# tfidf_raw <- tidy_sona_sentences_filtered %>% 
+#   unnest_tokens(word, word, token = "words" ) %>% filter(!word %in% stop_words$word) %>% 
+#   filter(word %in% words_to_keep$word) %>%
+#   select(c(3, 5, 6)) %>% group_by(word_index, president_13) %>% count(word) 
+#   
+# 
+# tfidf_bind <- tfidf_raw %>% bind_tf_idf(word, word_index, n) 
+# 
+# tfidf_reduced <- tfidf_bind %>% select(c(1, 2, 3, 4, 7)) %>% 
+#   pivot_wider(names_from = word, values_from = tf_idf)
+# 
+# 
+# tfidf_reduced <- replace(tfidf_reduced, is.na(tfidf_reduced),0)
+# tfidf_reduced <- tfidf_reduced %>% rename(President = president_13, 
+#                                         sentence_index = word_index)
+# 
 
 
 ## balanced data?
@@ -409,13 +413,13 @@ tail(training_data_normal_bof_y)
 dim(training_data_normal_bof_y)
 
 history_normal <- model_nn_normal %>% fit(
-  training_data_normal_bof_x, testing, 
+  training_data_normal_bof_x, training_data_normal_bof_y, 
   epochs = 30, batch_size = 5, 
   validation_split = 0.2, shuffle = TRUE
 )
 
 save(history_normal, file = "history_normal.RData")
-
+load("history_normal.RData")
 
 
 ##upsampled nn
@@ -472,7 +476,7 @@ history_smote <- model_nn_smote %>% fit(
 )
 
 save(history_smote, file = "history_smote.RData")
-
+load("history_smote.RData")
 
 
 ## testing all nn
@@ -482,9 +486,9 @@ save(history_smote, file = "history_smote.RData")
 validation_data_normal_bof_x <- as.matrix(validation_data_normal_bof_x)
 validation_data_normal_bof_y <- to_categorical(validation_data_normal_bof_y)
 
-model_nn_normal %>% keras::evaluate(validation_data_normal_bof_x, validation_data_normal_bof_y)
-result <- model_nn_normal %>% evaluate(validation_data_normal_bof_x, 
-                                       validation_data_normal_bof_y)
+model_nn_normal %>% evaluate(validation_data_normal_bof_x, validation_data_normal_bof_y)
+#result <- model_nn_normal %>% evaluate(validation_data_normal_bof_x, 
+                                       #validation_data_normal_bof_y)
 
 validation_data_upsampled_bow_x <- as.matrix(validation_data_upsampled_bow_x)
 validation_data_upsampled_bow_y <- to_categorical(validation_data_upsampled_bow_y)
@@ -527,7 +531,7 @@ history_cnn_normal <- model_cnn_normal %>% fit(
 )
 
 save(history_cnn_normal, file = "history_cnn_normal.RData")
-
+load("history_cnn_smote.RData")
 
 ##upsampled
 tensorflow::set_random_seed(2493274)
@@ -645,22 +649,29 @@ gbm_gridsearch_smote <- train(President ~ ., data = training_data_smote_bow,
 save(gbm_gridsearch_smote, file = "gbm_gridsearch_smote.RData")
 confusionMatrix(gbm_gridsearch_smote)
 
-
+load("gbm_gridsearch_normal.RData")
 ## validation
 
 ## Prediction
 gbm_pred_normal <- predict(gbm_gridsearch_normal, validation_data_normal_bof)
 confusionMatrix(gbm_pred_normal, validation_data_normal_bof$President)
 
+
 gbm_pred_upsample <- predict(gbm_gridsearch_upsample, validation_data_upsampled_bow)
-confusionMatrix(gbm_gridsearch_upsample, validation_data_upsampled_bow$Class)
+sum(gbm_pred_upsample == validation_data_upsampled_bow$Class)/length(gbm_pred_upsample)
+
 
 gbm_pred_smote <- predict(gbm_gridsearch_smote, validation_data_smote_bow)
-confusionMatrix(gbm_gridsearch_smote, validation_data_smote_bow$President)
+sum(gbm_pred_smote == validation_data_smote_bow$President)/length(gbm_pred_smote)
 
 
 
 ## final test! 
 
+
+test_data_upsampled_bow_x <- as.matrix(test_data_upsampled_bow_x)
+test_data_upsampled_bow_y <- to_categorical(test_data_upsampled_bow_y)
+
+test_result <- model_nn_upsample %>% evaluate(test_data_upsampled_bow_x, test_data_upsampled_bow_y)
 
 
