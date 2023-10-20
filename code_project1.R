@@ -133,7 +133,8 @@ ggplot(most_common_words_per_pres, aes(x = reorder(word, n), y = n, fill = presi
 exclude_words <- c("government", "people", "south", "africa", "african")
 
 most_common_words_filtered <- most_common_words_per_pres %>%
-  filter(!word %in% exclude_words)
+  filter(!word %in% exclude_words) %>% filter(president_13 != 'Motlanthe') %>% 
+  filter(president_13 != "deKlerk")
 
 # Create the plot using the filtered data frame
 ggplot(most_common_words_filtered, aes(x = reorder(word, n), y = n, fill = president_13)) +
@@ -167,13 +168,16 @@ bigrams_filtered %>%
   na.omit()  # if a tweet contains just one word, then the bigrams will return NA
 
 bigrams_counted <- bigrams_united %>% group_by(president_13) %>% count(bigram) %>% arrange(desc(n)) %>%
-  slice_head(n = 20) %>%
+  slice_head(n = 15) %>%
   ungroup() %>%
-  filter(!bigram %in% c("south africa", "south african", "south africans", 'madame speaker', 'honourable speaker'))
+  filter(!bigram %in% 
+           c("south africa", "south african", "south africans", 'madame speaker', 
+             'honourable speaker')) %>% filter(president_13 != 'Motlanthe') %>% 
+  filter(president_13 != "deKlerk")
 
 ggplot(bigrams_counted, aes(x = reorder(bigram, n), y = n, fill = president_13)) +
   geom_bar(stat = "identity") +
-  labs(title = "Top 20 Words by President",
+  labs(title = "Top 15 Words by President",
        x = "Word",
        y = "Frequency") +
   theme_minimal() + coord_flip() + theme(legend.position = "none") +
@@ -189,6 +193,9 @@ tidy_sona_sentences <- sona %>%
   unnest_tokens(word, speech, token = 'sentences', to_lower = T) %>%
   anti_join(stop_words, by = c("word" = "word"))
 
+tidy_sona_sentences %>%
+  group_by(president_13) %>% count(word) %>% summarise(n = n())
+
 
 #remove deklerk and motlanthe
 
@@ -203,8 +210,6 @@ tidy_sona_sentences_filtered$word <-
 # bag of words
 tidy_sona_sentences_filtered <- tidy_sona_sentences_filtered %>% 
   mutate(word_index = row_number())
-
-
 
 bag_of_words <- tidy_sona_sentences_filtered %>% 
   unnest_tokens(word, word, token = "words" ) %>%
@@ -472,11 +477,14 @@ save(history_smote, file = "history_smote.RData")
 
 ## testing all nn
 
+
+
 validation_data_normal_bof_x <- as.matrix(validation_data_normal_bof_x)
 validation_data_normal_bof_y <- to_categorical(validation_data_normal_bof_y)
 
-model_nn_normal %>% evaluate(validation_data_normal_bof_x, validation_data_normal_bof_y)
-
+model_nn_normal %>% keras::evaluate(validation_data_normal_bof_x, validation_data_normal_bof_y)
+result <- model_nn_normal %>% evaluate(validation_data_normal_bof_x, 
+                                       validation_data_normal_bof_y)
 
 validation_data_upsampled_bow_x <- as.matrix(validation_data_upsampled_bow_x)
 validation_data_upsampled_bow_y <- to_categorical(validation_data_upsampled_bow_y)
@@ -487,10 +495,10 @@ model_nn_upsample %>% evaluate(validation_data_upsampled_bow_x, validation_data_
 validation_data_smote_bow_x <- as.matrix(validation_data_smote_bow_x)
 validation_data_smote_bow_y <- to_categorical(validation_data_smote_bow_y)
 
-model_nn_upsample %>% evaluate(validation_data_smote_bow_x, validation_data_smote_bow_y)
+model_nn_smote %>% evaluate(validation_data_smote_bow_x, validation_data_smote_bow_y)
 
 
-# y_test_hat <- model %>% predict(x_test) %>% k_argmax() %>% as.numeric()
+#y_test_hat <- model_nn_upsample %>% predict(validation_data_smote_bow_x) %>% k_argmax() %>% as.numeric()
 # table(y_test_original, y_test_hat)
 
 ## cnn
@@ -644,11 +652,11 @@ confusionMatrix(gbm_gridsearch_smote)
 gbm_pred_normal <- predict(gbm_gridsearch_normal, validation_data_normal_bof)
 confusionMatrix(gbm_pred_normal, validation_data_normal_bof$President)
 
-gbm_pred_normal <- predict(gbm_gridsearch_normal, validation_data_normal_bof)
-confusionMatrix(gbm_pred_normal, validation_data_normal_bof$President)
+gbm_pred_upsample <- predict(gbm_gridsearch_upsample, validation_data_upsampled_bow)
+confusionMatrix(gbm_gridsearch_upsample, validation_data_upsampled_bow$Class)
 
-gbm_pred_normal <- predict(gbm_gridsearch_normal, validation_data_normal_bof)
-confusionMatrix(gbm_pred_normal, validation_data_normal_bof$President)
+gbm_pred_smote <- predict(gbm_gridsearch_smote, validation_data_smote_bow)
+confusionMatrix(gbm_gridsearch_smote, validation_data_smote_bow$President)
 
 
 
